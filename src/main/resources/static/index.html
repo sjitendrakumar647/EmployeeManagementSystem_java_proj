@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Employee Management System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(to right, #667eea, #764ba2);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            padding: 30px;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+        }
+        .form-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #333;
+            font-weight: bold;
+        }
+        input {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 5px rgba(102, 126, 234, 0.5);
+        }
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        button {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        .btn-add {
+            background: #28a745;
+            color: white;
+        }
+        .btn-add:hover {
+            background: #218838;
+        }
+        .btn-clear {
+            background: #6c757d;
+            color: white;
+        }
+        .btn-clear:hover {
+            background: #5a6268;
+        }
+        .table-section {
+            margin-top: 30px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th {
+            background: #667eea;
+            color: white;
+            padding: 15px;
+            text-align: left;
+            font-weight: bold;
+        }
+        td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #ddd;
+        }
+        tr:hover {
+            background: #f5f5f5;
+        }
+        .btn-edit {
+            background: #007bff;
+            color: white;
+            padding: 6px 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        .btn-edit:hover {
+            background: #0056b3;
+        }
+        .btn-delete {
+            background: #dc3545;
+            color: white;
+            padding: 6px 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        .btn-delete:hover {
+            background: #c82333;
+        }
+        .message {
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            display: none;
+        }
+        .message.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+            display: block;
+        }
+        .message.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Employee Management System</h1>
+        
+        <div id="message" class="message"></div>
+
+        <div class="form-section">
+            <h2>Add/Update Employee</h2>
+            <form id="employeeForm">
+                <input type="hidden" id="employeeId">
+                
+                <div class="form-group">
+                    <label for="name">Name:</label>
+                    <input type="text" id="name" placeholder="Enter employee name" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="mobile">Mobile:</label>
+                    <input type="text" id="mobile" placeholder="Enter mobile number" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="email">Email:</label>
+                    <input type="email" id="email" placeholder="Enter email address" required>
+                </div>
+
+                <div class="button-group">
+                    <button type="button" class="btn-add" onclick="saveEmployee()">Add Employee</button>
+                    <button type="button" class="btn-clear" onclick="clearForm()">Clear</button>
+                </div>
+            </form>
+        </div>
+
+        <div class="table-section">
+            <h2>Employees List</h2>
+            <table id="employeeTable">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Name</th>
+                        <th>Mobile</th>
+                        <th>Email</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                    <!-- Data will be inserted here -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE_URL = "http://localhost:8080";
+
+        // Load all employees on page load
+        window.addEventListener('load', () => {
+            getAllEmployees();
+        });
+
+        // Get all employees
+        function getAllEmployees() {
+            fetch(`${API_BASE_URL}/getemployees`)
+                .then(response => response.json())
+                .then(data => {
+                    displayEmployees(data);
+                })
+                .catch(error => {
+                    showMessage("Error fetching employees", "error");
+                    console.error("Error:", error);
+                });
+        }
+
+        // Display employees in table
+        function displayEmployees(employees) {
+            const tableBody = document.getElementById('tableBody');
+            tableBody.innerHTML = '';
+
+            if (employees.length === 0) {
+                tableBody.innerHTML = '<tr><td colspan="5" style="text-align: center;">No employees found</td></tr>';
+                return;
+            }
+
+            employees.forEach(employee => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${employee.id}</td>
+                    <td>${employee.name}</td>
+                    <td>${employee.mobile}</td>
+                    <td>${employee.email}</td>
+                    <td>
+                        <button class="btn-edit" onclick="editEmployee(${employee.id})">Edit</button>
+                        <button class="btn-delete" onclick="deleteEmployee(${employee.id})">Delete</button>
+                    </td>
+                `;
+                tableBody.appendChild(row);
+            });
+        }
+
+        // Save employee (create or update)
+        function saveEmployee() {
+            const id = document.getElementById('employeeId').value;
+            const name = document.getElementById('name').value;
+            const mobile = document.getElementById('mobile').value;
+            const email = document.getElementById('email').value;
+
+            if (!name || !mobile || !email) {
+                showMessage("All fields are required", "error");
+                return;
+            }
+
+            const employeeData = { name, mobile, email };
+
+            if (id) {
+                // Update employee
+                fetch(`${API_BASE_URL}/updateEmployee/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(employeeData)
+                })
+                    .then(response => response.text())
+                    .then(data => {
+                        showMessage("Employee updated successfully", "success");
+                        clearForm();
+                        getAllEmployees();
+                    })
+                    .catch(error => {
+                        showMessage("Error updating employee", "error");
+                        console.error("Error:", error);
+                    });
+            } else {
+                // Create employee
+                fetch(`${API_BASE_URL}/addemployee`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(employeeData)
+                })
+                    .then(response => response.text())
+                    .then(data => {
+                        showMessage("Employee added successfully", "success");
+                        clearForm();
+                        getAllEmployees();
+                    })
+                    .catch(error => {
+                        showMessage("Error adding employee", "error");
+                        console.error("Error:", error);
+                    });
+            }
+        }
+
+        // Edit employee
+        function editEmployee(id) {
+            fetch(`${API_BASE_URL}/getemployee/${id}`)
+                .then(response => response.json())
+                .then(employee => {
+                    document.getElementById('employeeId').value = employee.id;
+                    document.getElementById('name').value = employee.name;
+                    document.getElementById('mobile').value = employee.mobile;
+                    document.getElementById('email').value = employee.email;
+                    window.scrollTo(0, 0);
+                })
+                .catch(error => {
+                    showMessage("Error fetching employee", "error");
+                    console.error("Error:", error);
+                });
+        }
+
+        // Delete employee
+        function deleteEmployee(id) {
+            if (confirm('Are you sure you want to delete this employee?')) {
+                fetch(`${API_BASE_URL}/deleteemployee/${id}`, {
+                    method: 'DELETE'
+                })
+                    .then(response => response.text())
+                    .then(data => {
+                        showMessage("Employee deleted successfully", "success");
+                        getAllEmployees();
+                    })
+                    .catch(error => {
+                        showMessage("Error deleting employee", "error");
+                        console.error("Error:", error);
+                    });
+            }
+        }
+
+        // Clear form
+        function clearForm() {
+            document.getElementById('employeeForm').reset();
+            document.getElementById('employeeId').value = '';
+        }
+
+        // Show message
+        function showMessage(message, type) {
+            const messageDiv = document.getElementById('message');
+            messageDiv.textContent = message;
+            messageDiv.className = `message ${type}`;
+            setTimeout(() => {
+                messageDiv.className = 'message';
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
